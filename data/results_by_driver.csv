@@ -1,1 +1,15 @@
 
+driver_code,driver,team,total_laps,avg_lap_time_s,sd_clean,sd_pressure,cv_clean_pct,cv_pressure_pct,consistency_drop_pct,avg_delta_clean_s,avg_delta_pressure_s,pressure_penalty_s,t_statistic,p_value,significant_at_05
+ALO,Fernando Alonso,Aston Martin,375,90.616,9.957,9.925,11.482,10.891,-5.1,0.626,0.737,0.111,2.306,0.0236,True
+VER,Max Verstappen,Red Bull,375,90.017,11.282,8.83,12.426,9.889,-20.4,0.583,0.719,0.136,3.408,0.0007,True
+HUL,Nico Hulkenberg,Haas,372,91.17,9.335,9.734,10.046,10.715,6.7,0.7,0.845,0.144,2.496,0.0143,True
+OCO,Esteban Ocon,Alpine,375,91.157,9.86,9.62,10.876,10.5,-3.5,0.734,0.885,0.152,2.615,0.0099,True
+SAI,Carlos Sainz,Ferrari,373,90.411,7.754,10.236,8.535,11.335,32.8,0.731,0.892,0.161,3.085,0.0025,True
+RUS,George Russell,Mercedes,376,90.435,8.928,9.883,9.864,10.991,11.4,0.747,0.92,0.173,2.969,0.0037,True
+STR,Lance Stroll,Aston Martin,374,91.032,9.437,10.081,10.592,11.047,4.3,0.869,1.044,0.175,3.035,0.0029,True
+NOR,Lando Norris,McLaren,375,90.221,9.236,9.774,10.169,10.802,6.2,0.706,0.887,0.181,3.222,0.0017,True
+PER,Sergio Perez,Red Bull,375,90.618,8.093,9.922,8.738,11.041,26.4,0.829,1.059,0.23,3.47,0.0008,True
+HAM,Lewis Hamilton,Mercedes,375,90.438,9.566,9.934,10.566,10.982,3.9,0.586,0.827,0.241,5.12,0.0,True
+LEC,Charles Leclerc,Ferrari,376,90.349,8.843,9.958,9.65,11.037,14.4,0.671,0.93,0.258,4.845,0.0,True
+PIA,Oscar Piastri,McLaren,375,90.43,9.936,9.523,11.306,10.406,-8.0,0.555,0.861,0.306,6.517,0.0,True
+GAS,Pierre Gasly,Alpine,375,91.134,10.592,9.436,11.678,10.348,-11.4,0.857,1.169,0.311,5.416,0.0,True
