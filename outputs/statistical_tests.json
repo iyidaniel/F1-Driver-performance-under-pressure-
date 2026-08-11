@@ -1,1 +1,25 @@
 
+{
+  "welch_t_test": {
+    "t_statistic": 14.217,
+    "p_value": 1.719e-43,
+    "interpretation": "Pressured laps are significantly slower than clean-air laps"
+  },
+  "levene_test_equal_variance": {
+    "f_statistic": 43.681,
+    "p_value": 4.343e-11,
+    "interpretation": "Variance differs significantly under pressure (consistency drops)"
+  },
+  "mann_whitney_u": {
+    "u_statistic": 1972596.5,
+    "p_value": 4.956e-37
+  },
+  "anova_across_scenarios": {
+    "f_statistic": 59.123,
+    "p_value": 1.554e-37
+  },
+  "sample_sizes": {
+    "n_clean_air": 934,
+    "n_pressured": 3321
+  }
+}
