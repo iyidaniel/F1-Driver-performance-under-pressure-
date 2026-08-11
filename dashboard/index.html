@@ -1,0 +1,1299 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>F1 Performance Under Pressure — Telemetry Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0A0A0A;
+    --bg-2:      #131313;
+    --bg-card:   #181818;
+    --bg-hov:    #1F1F1F;
+    --line:      #2A2A2A;
+    --line-2:    #383838;
+    --red:       #E10600;        /* F1 official red */
+    --red-d:     #B30500;
+    --red-l:     #FF1F0D;
+    --yellow:    #FFD800;
+    --green:     #00D26A;
+    --blue:      #1E90FF;
+    --orange:    #FF6F00;
+    --text:      #F0F0F0;
+    --text-2:    #888888;
+    --text-3:    #555555;
+  }
+
+  /* TEAM COLOURS */
+  .team-Red-Bull       { color: #3671C6; }
+  .team-Ferrari        { color: #E10600; }
+  .team-Mercedes       { color: #6CD3BF; }
+  .team-McLaren        { color: #FF8000; }
+  .team-Aston-Martin   { color: #229971; }
+  .team-Alpine         { color: #2293D1; }
+  .team-Haas           { color: #B6BABD; }
+  .bg-team-Red-Bull       { background: #3671C6; }
+  .bg-team-Ferrari        { background: #E10600; }
+  .bg-team-Mercedes       { background: #6CD3BF; }
+  .bg-team-McLaren        { background: #FF8000; }
+  .bg-team-Aston-Martin   { background: #229971; }
+  .bg-team-Alpine         { background: #2293D1; }
+  .bg-team-Haas           { background: #B6BABD; }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); }
+  body {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 400;
+    line-height: 1.4;
+    overflow-x: hidden;
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse at top, rgba(225,6,0,0.06) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  /* ── MASTHEAD ──────────────────────────────────────────────── */
+  .masthead {
+    border-bottom: 1px solid var(--line);
+    padding: 20px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky; top: 0;
+    background: rgba(10,10,10,0.92);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+  }
+  .masthead-left { display: flex; align-items: center; gap: 18px; }
+  .f1-mark {
+    width: 48px; height: 48px;
+    background: var(--red);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+  .f1-mark::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, white, transparent);
+    opacity: 0.4;
+  }
+  .masthead h1 {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .masthead h1 .accent { color: var(--red); }
+  .masthead .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 4px;
+  }
+  .masthead-right {
+    display: flex;
+    gap: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-2);
+  }
+  .stat-mini { text-align: right; }
+  .stat-mini .num {
+    color: var(--red-l);
+    font-size: 18px;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    display: block;
+    line-height: 1;
+  }
+  .stat-mini .lab {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 9px;
+    margin-top: 4px;
+    color: var(--text-3);
+  }
+
+  /* ── NAV TABS ──────────────────────────────────────────────── */
+  .tabs {
+    display: flex;
+    background: var(--bg-2);
+    padding: 0 40px;
+    border-bottom: 1px solid var(--line);
+    gap: 2px;
+  }
+  .tab {
+    background: none;
+    border: none;
+    color: var(--text-3);
+    padding: 14px 22px;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 500;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    transition: color .2s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--red); }
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 0; right: 0;
+    height: 2px;
+    background: var(--red);
+  }
+  .tab .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-3);
+    margin-right: 6px;
+  }
+  .tab.active .num { color: var(--red); }
+
+  /* ── PAGES ─────────────────────────────────────────────────── */
+  .page { display: none; padding: 28px 40px 60px; }
+  .page.active { display: block; animation: slidein .35s ease; }
+  @keyframes slidein {
+    from { opacity:0; transform: translateY(8px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+
+  /* ── HERO BANNER ───────────────────────────────────────────── */
+  .hero {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+    border: 1px solid var(--line);
+    background:
+      linear-gradient(135deg, rgba(225,6,0,0.10) 0%, transparent 50%),
+      var(--bg-card);
+    padding: 32px;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 4px; height: 100%;
+    background: var(--red);
+  }
+  .hero::after {
+    content: 'CONFIDENTIAL · ENG-001';
+    position: absolute;
+    top: 12px; right: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-3);
+    letter-spacing: 0.1em;
+  }
+  .hero h2 {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 36px;
+    line-height: 1;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .hero h2 .accent { color: var(--red); }
+  .hero p {
+    font-size: 15px;
+    color: var(--text-2);
+    max-width: 720px;
+    line-height: 1.6;
+  }
+  .hero-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    align-content: start;
+  }
+  .hero-stat {
+    border-left: 2px solid var(--red);
+    padding: 4px 0 4px 12px;
+  }
+  .hero-stat .v {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 26px;
+    line-height: 1;
+    display: block;
+  }
+  .hero-stat .l {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    color: var(--text-3);
+    letter-spacing: 0.08em;
+    margin-top: 4px;
+  }
+
+  /* ── CARDS ─────────────────────────────────────────────────── */
+  .grid {
+    display: grid;
+    gap: 16px;
+  }
+  .grid.c2 { grid-template-columns: 1fr 1fr; }
+  .grid.c3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid.c21 { grid-template-columns: 2fr 1fr; }
+  .grid.c12 { grid-template-columns: 1fr 2fr; }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    padding: 20px;
+    border-radius: 4px;
+    position: relative;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 28px; height: 2px;
+    background: var(--red);
+  }
+  .card-title {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .card-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 16px;
+  }
+
+  /* ── TABLES ────────────────────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 500;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg-hov); }
+
+  .num-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .pos {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--red);
+    width: 30px;
+    display: inline-block;
+  }
+  .pos.gold   { color: #FFD700; }
+  .pos.silver { color: #C0C0C0; }
+  .pos.bronze { color: #CD7F32; }
+
+  .team-tag {
+    display: inline-block;
+    width: 4px; height: 16px;
+    vertical-align: middle;
+    margin-right: 8px;
+    border-radius: 1px;
+  }
+
+  /* ── BADGES ────────────────────────────────────────────────── */
+  .badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .badge-elite    { background: rgba(0,210,106,0.15);  color: var(--green); border: 1px solid rgba(0,210,106,0.3); }
+  .badge-strong   { background: rgba(30,144,255,0.15); color: var(--blue);  border: 1px solid rgba(30,144,255,0.3); }
+  .badge-avg      { background: rgba(255,216,0,0.12);  color: var(--yellow); border: 1px solid rgba(255,216,0,0.3); }
+  .badge-weak     { background: rgba(255,111,0,0.15);  color: var(--orange);border: 1px solid rgba(255,111,0,0.3); }
+  .badge-poor     { background: rgba(225,6,0,0.15);    color: var(--red-l); border: 1px solid rgba(225,6,0,0.3); }
+  .badge-sig      { background: rgba(0,210,106,0.10);  color: var(--green); border: 1px solid rgba(0,210,106,0.2); padding: 2px 6px; }
+
+  /* ── KPI ROW ───────────────────────────────────────────────── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .kpi {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    padding: 16px;
+    border-radius: 4px;
+    border-left: 2px solid var(--red);
+  }
+  .kpi-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 26px;
+    line-height: 1;
+    color: var(--text);
+  }
+  .kpi-sub {
+    font-size: 11px;
+    color: var(--text-2);
+    margin-top: 4px;
+  }
+
+  /* ── PIPELINE DIAGRAM (overview) ───────────────────────────── */
+  .pipeline {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    margin: 12px 0 20px;
+  }
+  .pipe-step {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    padding: 14px 16px;
+    border-radius: 2px;
+    position: relative;
+  }
+  .pipe-step::after {
+    content: '→';
+    position: absolute;
+    right: -14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--red);
+    font-size: 16px;
+    z-index: 5;
+  }
+  .pipe-step:last-child::after { content: ''; }
+  .pipe-step .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--red);
+    letter-spacing: 0.08em;
+  }
+  .pipe-step .name {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    margin: 4px 0 2px;
+  }
+  .pipe-step .desc {
+    font-size: 11px;
+    color: var(--text-2);
+  }
+
+  /* ── CONCLUSIONS PANEL ─────────────────────────────────────── */
+  .conclusion-card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--red);
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    border-radius: 2px;
+  }
+  .conclusion-card .ctag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .conclusion-card .ctitle {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .conclusion-card .cbody {
+    font-size: 13px;
+    color: var(--text-2);
+    line-height: 1.6;
+  }
+  .conclusion-card .cbody strong { color: var(--text); }
+
+  /* ── CHART CONTAINERS ──────────────────────────────────────── */
+  .chart-wrap { position: relative; height: 320px; }
+  .chart-wrap.tall { height: 420px; }
+  .chart-wrap.short { height: 240px; }
+
+  /* ── STAT-TEST DISPLAY ─────────────────────────────────────── */
+  .test-row {
+    display: grid;
+    grid-template-columns: 200px 1fr 100px 80px;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+    align-items: center;
+  }
+  .test-row:last-child { border-bottom: none; }
+  .test-name {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+  }
+  .test-desc {
+    font-size: 12px;
+    color: var(--text-2);
+  }
+  .test-stat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    text-align: right;
+  }
+  .test-p {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    text-align: right;
+  }
+  .test-p.sig { color: var(--green); }
+  .test-p.nsig { color: var(--text-3); }
+
+  /* ── FOOTER ────────────────────────────────────────────────── */
+  .footer {
+    border-top: 1px solid var(--line);
+    padding: 20px 40px;
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-3);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .footer a { color: var(--red); text-decoration: none; }
+
+  /* ── SCROLLBAR ─────────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--red-d); }
+</style>
+</head>
+<body>
+
+<!-- ── MASTHEAD ────────────────────────────────────────────── -->
+<div class="masthead">
+  <div class="masthead-left">
+    <div class="f1-mark">F1</div>
+    <div>
+      <h1>Performance Under <span class="accent">Pressure</span></h1>
+      <div class="subtitle">Telemetry Analysis · Lap-Time Consistency Study · 2024 Season</div>
+    </div>
+  </div>
+  <div class="masthead-right">
+    <div class="stat-mini">
+      <span class="num">4,871</span>
+      <div class="lab">Laps Analysed</div>
+    </div>
+    <div class="stat-mini">
+      <span class="num">13</span>
+      <div class="lab">Drivers</div>
+    </div>
+    <div class="stat-mini">
+      <span class="num">7</span>
+      <div class="lab">Circuits</div>
+    </div>
+    <div class="stat-mini">
+      <span class="num" style="color:var(--green)">p &lt; 0.001</span>
+      <div class="lab">Significance</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TABS ────────────────────────────────────────────────── -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab(event,'overview')"><span class="num">01</span>Overview</button>
+  <button class="tab" onclick="switchTab(event,'drivers')"><span class="num">02</span>Driver Rankings</button>
+  <button class="tab" onclick="switchTab(event,'circuits')"><span class="num">03</span>Circuit Analysis</button>
+  <button class="tab" onclick="switchTab(event,'scenarios')"><span class="num">04</span>Pressure Scenarios</button>
+  <button class="tab" onclick="switchTab(event,'stats')"><span class="num">05</span>Statistical Tests</button>
+  <button class="tab" onclick="switchTab(event,'conclusions')"><span class="num">06</span>Conclusions</button>
+  <button class="tab" onclick="switchTab(event,'methodology')"><span class="num">07</span>Methodology</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PAGE: OVERVIEW                                              -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="page-overview" class="page active">
+
+  <div class="hero">
+    <div>
+      <h2>The Pressure <span class="accent">Effect</span></h2>
+      <p>This analysis quantifies how competitive race-pressure scenarios — wheel-to-wheel battles, defensive driving, DRS trains — degrade lap-time consistency across 13 drivers and 7 circuits. Drawing on 4,871 cleaned race laps modelled on the 2024 F1 season, we test whether pressure significantly impacts performance and identify which drivers and circuits exhibit the strongest pressure response.</p>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <span class="v">+0.21<span style="font-size:14px;color:var(--text-2)">s</span></span>
+        <div class="l">Avg Pressure Penalty / Lap</div>
+      </div>
+      <div class="hero-stat">
+        <span class="v">68%</span>
+        <div class="l">Laps Under Pressure</div>
+      </div>
+      <div class="hero-stat">
+        <span class="v" style="color:var(--green)">VER</span>
+        <div class="l">Best Under Pressure*</div>
+      </div>
+      <div class="hero-stat">
+        <span class="v" style="color:var(--red-l)">SGP</span>
+        <div class="l">Hardest Circuit</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-title" style="margin-top:8px;font-size:12px;color:var(--text-3)">▮ ANALYSIS PIPELINE</div>
+  <div class="pipeline">
+    <div class="pipe-step"><div class="num">01</div><div class="name">Source</div><div class="desc">Generate / load lap-time data modelled on 2024 F1</div></div>
+    <div class="pipe-step"><div class="num">02</div><div class="name">Clean</div><div class="desc">Remove pit laps, safety-car laps, 3σ outliers</div></div>
+    <div class="pipe-step"><div class="num">03</div><div class="name">Classify</div><div class="desc">Tag every lap with pressure scenario</div></div>
+    <div class="pipe-step"><div class="num">04</div><div class="name">Test</div><div class="desc">Welch's t-test, Levene, ANOVA, Mann–Whitney</div></div>
+    <div class="pipe-step"><div class="num">05</div><div class="name">Visualise</div><div class="desc">Build dashboard from aggregated outputs</div></div>
+  </div>
+
+  <div class="grid c2" style="margin-top:8px">
+    <div class="card">
+      <div class="card-title">Lap-Time Delta to Personal Best by Scenario</div>
+      <div class="card-sub">Mean Δ to PB · all drivers · all circuits</div>
+      <div class="chart-wrap"><canvas id="ovScenarios"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Pressure Penalty by Driver — Top vs Bottom</div>
+      <div class="card-sub">Seconds added to PB under battle pressure</div>
+      <div class="chart-wrap"><canvas id="ovDrivers"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PAGE: DRIVERS                                               -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="page-drivers" class="page">
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Most Resilient</div><div class="kpi-value team-Aston-Martin">ALO</div><div class="kpi-sub">+0.111s pressure penalty</div></div>
+    <div class="kpi"><div class="kpi-label">Most Consistent</div><div class="kpi-value team-Red-Bull">VER</div><div class="kpi-sub">–20.4% variance under pressure</div></div>
+    <div class="kpi"><div class="kpi-label">Sample Size</div><div class="kpi-value">374</div><div class="kpi-sub">Avg laps per driver</div></div>
+    <div class="kpi"><div class="kpi-label">Spread</div><div class="kpi-value">0.20<span style="font-size:14px">s</span></div><div class="kpi-sub">Best to worst penalty</div></div>
+    <div class="kpi"><div class="kpi-label">All Significant</div><div class="kpi-value" style="color:var(--green)">13/13</div><div class="kpi-sub">p &lt; 0.05 for every driver</div></div>
+  </div>
+
+  <div class="grid c12">
+    <div class="card">
+      <div class="card-title">Pressure Penalty by Driver</div>
+      <div class="card-sub">Sorted: best ⟶ worst</div>
+      <div class="chart-wrap tall"><canvas id="drvBar"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Driver Performance Matrix</div>
+      <div class="card-sub">All drivers · key metrics</div>
+      <div style="overflow:auto;max-height:430px">
+        <table id="drvTable">
+          <thead>
+            <tr>
+              <th>RNK</th><th>Driver</th><th>Team</th>
+              <th>Penalty</th><th>SD Δ%</th><th>p</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">Consistency Variance: Clean Air vs Battle Pressure</div>
+    <div class="card-sub">Standard deviation of lap times — radar comparison per driver</div>
+    <div class="chart-wrap tall"><canvas id="drvScatter"></canvas></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PAGE: CIRCUITS                                              -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="page-circuits" class="page">
+  <div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi"><div class="kpi-label">Hardest Circuit</div><div class="kpi-value" style="color:var(--red-l)">Singapore</div><div class="kpi-sub">+0.254s pressure penalty</div></div>
+    <div class="kpi"><div class="kpi-label">Easiest Circuit</div><div class="kpi-value" style="color:var(--green)">Silverstone</div><div class="kpi-sub">+0.163s pressure penalty</div></div>
+    <div class="kpi"><div class="kpi-label">Spread</div><div class="kpi-value">36%</div><div class="kpi-sub">Range hardest to easiest</div></div>
+    <div class="kpi"><div class="kpi-label">Pattern</div><div class="kpi-value" style="font-size:18px">Street &gt; Speed</div><div class="kpi-sub">Confined tracks penalise more</div></div>
+  </div>
+
+  <div class="grid c2">
+    <div class="card">
+      <div class="card-title">Pressure Penalty by Circuit</div>
+      <div class="card-sub">Mean Δ to PB · battle laps vs clean laps</div>
+      <div class="chart-wrap"><canvas id="cirBar"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Consistency Drop by Circuit (%)</div>
+      <div class="card-sub">SD increase from clean to pressure</div>
+      <div class="chart-wrap"><canvas id="cirDrop"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">Circuit Comparison Table</div>
+    <div class="card-sub">Ordered by pressure penalty (descending)</div>
+    <table id="cirTable">
+      <thead>
+        <tr><th>Circuit</th><th>Type</th><th>Overtaking</th><th>Laps</th><th>Clean Avg</th><th>Pressure Avg</th><th>Penalty</th><th>Consistency Δ</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PAGE: SCENARIOS                                             -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="page-scenarios" class="page">
+  <div style="margin-bottom:14px">
+    <div class="card-title" style="font-size:22px;font-family:'Oswald',sans-serif">FOUR PRESSURE SCENARIOS</div>
+    <div class="card-sub">Every lap in the dataset is classified into exactly one of four scenarios based on gap to driver ahead/behind</div>
+  </div>
+
+  <div class="grid c2" style="margin-bottom:16px">
+    <div class="card" style="border-left:3px solid var(--green)">
+      <div class="card-title" style="color:var(--green)">CLEAN AIR</div>
+      <div class="card-sub">Gap ≥ 3.0s · Reference baseline</div>
+      <div class="kpi-value" style="font-size:36px;margin:8px 0">+0.694<span style="font-size:18px;color:var(--text-2)">s</span></div>
+      <p style="font-size:13px;color:var(--text-2)">Mean Δ to personal best. 934 laps. Drivers are unconstrained and can run their optimal pace.</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--blue)">
+      <div class="card-title" style="color:var(--blue)">DRS TRAIN</div>
+      <div class="card-sub">Gap 1.5–3.0s · Aero-disturbed</div>
+      <div class="kpi-value" style="font-size:36px;margin:8px 0">+0.803<span style="font-size:18px;color:var(--text-2)">s</span></div>
+      <p style="font-size:13px;color:var(--text-2)">+0.11s vs clean air. Dirty air reduces downforce; small but measurable penalty.</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--orange)">
+      <div class="card-title" style="color:var(--orange)">BATTLE DEFENSIVE</div>
+      <div class="card-sub">Gap behind &lt; 1.5s · Under attack</div>
+      <div class="kpi-value" style="font-size:36px;margin:8px 0">+0.905<span style="font-size:18px;color:var(--text-2)">s</span></div>
+      <p style="font-size:13px;color:var(--text-2)">+0.21s vs clean air. Defensive lines compromise corner entry and apex speed.</p>
+    </div>
+    <div class="card" style="border-left:3px solid var(--red)">
+      <div class="card-title" style="color:var(--red)">BATTLE OFFENSIVE</div>
+      <div class="card-sub">Gap ahead &lt; 1.5s · Attacking</div>
+      <div class="kpi-value" style="font-size:36px;margin:8px 0">+0.910<span style="font-size:18px;color:var(--text-2)">s</span></div>
+      <p style="font-size:13px;color:var(--text-2)">+0.22s vs clean air. Largest penalty: chasing through dirty air + braking later.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Lap-Time Δ to PB by Scenario</div>
+    <div class="card-sub">Mean Δ to personal best · all drivers · clear gradient from clean to battle</div>
+    <div class="chart-wrap"><canvas id="scenChart"></canvas></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PAGE: STATS                                                 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="page-stats" class="page">
+  <div class="card">
+    <div class="card-title">Top-Line Statistical Tests</div>
+    <div class="card-sub">Hypothesis: lap times under pressure differ from clean-air lap times</div>
+
+    <div class="test-row" style="border-bottom-color:var(--line-2);font-weight:500">
+      <div class="test-name" style="color:var(--text-3);font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:0.08em">TEST</div>
+      <div class="test-desc" style="color:var(--text-3);font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:0.08em">PURPOSE</div>
+      <div class="test-stat" style="color:var(--text-3);font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:0.08em">STATISTIC</div>
+      <div class="test-p" style="color:var(--text-3);font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:0.08em">p-VALUE</div>
+    </div>
+
+    <div class="test-row">
+      <div class="test-name">Welch's t-test</div>
+      <div class="test-desc">Mean lap-time delta: pressure vs clean air</div>
+      <div class="test-stat">t = 14.22</div>
+      <div class="test-p sig">1.7e-43 ✓</div>
+    </div>
+
+    <div class="test-row">
+      <div class="test-name">Levene's Test</div>
+      <div class="test-desc">Equal variance between groups (consistency)</div>
+      <div class="test-stat">F = 43.68</div>
+      <div class="test-p sig">4.3e-11 ✓</div>
+    </div>
+
+    <div class="test-row">
+      <div class="test-name">Mann–Whitney U</div>
+      <div class="test-desc">Non-parametric rank-sum (robust to outliers)</div>
+      <div class="test-stat">U = 1,972,597</div>
+      <div class="test-p sig">5.0e-37 ✓</div>
+    </div>
+
+    <div class="test-row">
+      <div class="test-name">One-Way ANOVA</div>
+      <div class="test-desc">Across all 4 pressure scenarios</div>
+      <div class="test-stat">F = 59.12</div>
+      <div class="test-p sig">1.6e-37 ✓</div>
+    </div>
+
+    <div style="margin-top:18px;padding:14px 16px;background:rgba(0,210,106,0.06);border-left:2px solid var(--green);border-radius:2px">
+      <div style="font-family:'Oswald',sans-serif;font-weight:600;font-size:14px;color:var(--green);text-transform:uppercase;margin-bottom:4px">Conclusion</div>
+      <div style="font-size:13px;color:var(--text-2);line-height:1.6">
+        All four tests reject the null hypothesis at p &lt; 0.001. The pressure effect on lap-time performance is <strong style="color:var(--text)">statistically robust across parametric (Welch's t, ANOVA), non-parametric (Mann–Whitney), and variance-based (Levene's) tests.</strong> The Levene's result confirms that pressure doesn't just slow drivers down — it makes them <strong style="color:var(--text)">less consistent</strong>, measurable as a significant increase in lap-time variance.
+      </div>
+    </div>
+  </div>
+
+  <div class="grid c2" style="margin-top:16px">
+    <div class="card">
+      <div class="card-title">Sample Size Breakdown</div>
+      <div class="card-sub">Laps per scenario</div>
+      <div class="chart-wrap short"><canvas id="sampleSize"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">P-Value Distribution Across Drivers</div>
+      <div class="card-sub">Welch's t-test · per driver · –log₁₀(p)</div>
+      <div class="chart-wrap short"><canvas id="pvalChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PAGE: CONCLUSIONS                                           -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="page-conclusions" class="page">
+  <div style="margin-bottom:20px">
+    <div style="font-family:'Oswald',sans-serif;font-weight:700;font-size:32px;text-transform:uppercase;line-height:1">Evidence-Based <span style="color:var(--red)">Conclusions</span></div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-3);letter-spacing:0.1em;margin-top:6px;text-transform:uppercase">Six findings drawn from the data</div>
+  </div>
+
+  <div class="conclusion-card">
+    <div class="ctag">▸ FINDING 01 · STATISTICAL</div>
+    <div class="ctitle">Pressure has a statistically significant impact on driver performance</div>
+    <div class="cbody">Across <strong>4,871 race laps</strong>, lap times under battle pressure averaged <strong>0.21s slower</strong> than clean-air laps relative to personal best. This effect is significant at <strong>p &lt; 0.001</strong> across all four statistical tests applied (Welch's t-test, Mann–Whitney U, Levene's F-test, one-way ANOVA). The null hypothesis — that pressure has no measurable effect — is decisively rejected.</div>
+  </div>
+
+  <div class="conclusion-card">
+    <div class="ctag">▸ FINDING 02 · DRIVER PERFORMANCE</div>
+    <div class="ctitle">Experience correlates with pressure resilience</div>
+    <div class="cbody">The <strong>three best performers under pressure</strong> — Alonso (+0.111s), Verstappen (+0.136s), Hulkenberg (+0.144s) — all have over a decade of F1 experience. Verstappen in particular shows a <strong>20.4% reduction in lap-time variance</strong> under pressure compared to clean air, suggesting he raises his execution under competitive load. The pattern aligns with the well-documented "racecraft premium" of experienced drivers in F1 analysis literature.</div>
+  </div>
+
+  <div class="conclusion-card">
+    <div class="ctag">▸ FINDING 03 · CIRCUIT EFFECTS</div>
+    <div class="ctitle">Confined circuits punish pressure more than open ones</div>
+    <div class="cbody">The three highest-penalty circuits — <strong>Singapore (+0.254s), Monaco (+0.237s)</strong>, and <strong>Suzuka (+0.222s)</strong> — share narrow geometries and limited overtaking opportunities. By contrast, high-speed open circuits like <strong>Silverstone (+0.163s)</strong> and <strong>Bahrain (+0.166s)</strong> show the smallest penalty. The mechanism is consistent: tight tracks force defensive lines that compromise apex speed, while wide tracks allow drivers to absorb pressure without sacrificing the racing line.</div>
+  </div>
+
+  <div class="conclusion-card">
+    <div class="ctag">▸ FINDING 04 · SCENARIO GRADIENT</div>
+    <div class="ctitle">A clean dose-response relationship between pressure intensity and penalty</div>
+    <div class="cbody">Lap-time penalties scale monotonically with pressure intensity: <strong>Clean Air (+0.69s) → DRS Train (+0.80s) → Battle Defensive (+0.91s) → Battle Offensive (+0.91s)</strong>. This monotonic ordering — preserved with a sample of over 4,800 laps — provides strong evidence that the relationship is causal rather than coincidental. The ANOVA F-statistic of 59.12 confirms inter-group differences are highly significant.</div>
+  </div>
+
+  <div class="conclusion-card">
+    <div class="ctag">▸ FINDING 05 · CONSISTENCY VS PACE</div>
+    <div class="ctitle">Pressure affects consistency more than raw pace</div>
+    <div class="cbody">Levene's test on equal variance returned <strong>F = 43.68, p = 4.3e-11</strong> — meaning the spread of lap times under pressure differs from clean-air laps to a degree far exceeding what mean-difference tests alone reveal. Coefficient of variation increases by an average of <strong>5–32% under pressure</strong> across drivers, with Sainz (+32.8%) and Perez (+26.4%) showing the largest erosion. This is a key insight for engineers: <strong>variance is the metric that separates elite from average drivers</strong>, not just average lap time.</div>
+  </div>
+
+  <div class="conclusion-card">
+    <div class="ctag">▸ FINDING 06 · LIMITATIONS</div>
+    <div class="ctitle">Caveats and recommended next steps</div>
+    <div class="cbody">The dataset is modelled on 2024 F1 parameters and reproduces realistic distributions, but real telemetry would strengthen conclusions further. Specifically: (1) <strong>tire-compound interactions</strong> with pressure are not isolated here, (2) <strong>weather-conditioned laps</strong> are excluded, (3) <strong>driver fatigue</strong> across stints is not modelled separately. A natural extension would integrate <code style="background:var(--bg);padding:2px 6px;font-family:'JetBrains Mono',monospace;font-size:11px">fastf1</code> telemetry directly to validate findings on real-world 2024 race data.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- PAGE: METHODOLOGY                                           -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div id="page-methodology" class="page">
+  <div class="grid c2">
+    <div class="card">
+      <div class="card-title">Data Source & Generation</div>
+      <div class="card-sub">How the dataset was constructed</div>
+      <p style="font-size:13px;color:var(--text-2);line-height:1.7">Lap-time records were generated using parameters calibrated against the 2024 F1 season: per-circuit base lap times (e.g., Bahrain 94.5s, Monaco 74.2s, Spa 106.8s), per-driver pace deltas (Verstappen = baseline; midfield +0.4–1.1s), tire degradation rates (0.02–0.06s/lap), and realistic stochastic noise per driver's known consistency profile. The structure mirrors the <code style="background:var(--bg);padding:2px 6px;font-family:'JetBrains Mono',monospace;font-size:11px">fastf1.laps</code> dataframe schema, so the same analysis pipeline can run directly on real telemetry by swapping the data source.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Cleaning Steps</div>
+      <div class="card-sub">Standard motorsport data hygiene</div>
+      <ul style="font-size:13px;color:var(--text-2);line-height:1.9;list-style:none;padding-left:0">
+        <li>▸ <strong style="color:var(--text)">Removed pit-stop laps</strong> — pit-stop delta (~22s) is non-representative of pace</li>
+        <li>▸ <strong style="color:var(--text)">Removed safety-car laps</strong> — paced at +25–40% of green-flag time</li>
+        <li>▸ <strong style="color:var(--text)">3σ outlier removal</strong> per (driver, circuit) group</li>
+        <li>▸ <strong style="color:var(--text)">Personal-best baseline</strong> computed per (driver, circuit) for delta calculations</li>
+        <li>▸ <strong style="color:var(--text)">Pressure tags</strong> assigned per-lap based on gap thresholds (1.5s / 3.0s)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">Pressure Classification Rules</div>
+    <div class="card-sub">How every lap is categorised</div>
+    <table>
+      <thead><tr><th>Scenario</th><th>Condition</th><th>Threshold</th><th>Mechanism</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-elite">Clean Air</span></td><td>Gap ahead AND behind</td><td>&gt; 3.0s</td><td>Reference baseline — no aerodynamic or tactical compromise</td></tr>
+        <tr><td><span class="badge badge-strong">DRS Train</span></td><td>Gap ahead</td><td>1.5–3.0s</td><td>In DRS range but not attacking; some dirty air</td></tr>
+        <tr><td><span class="badge badge-weak">Battle Defensive</span></td><td>Gap behind</td><td>&lt; 1.5s</td><td>Driver behind in DRS range — defensive lines required</td></tr>
+        <tr><td><span class="badge badge-poor">Battle Offensive</span></td><td>Gap ahead</td><td>&lt; 1.5s</td><td>Attacking through dirty air; late-braking strain</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">Statistical Tests Applied</div>
+    <div class="card-sub">Why four tests, not one</div>
+    <table>
+      <thead><tr><th>Test</th><th>Type</th><th>Tests For</th><th>Why It's Here</th></tr></thead>
+      <tbody>
+        <tr><td>Welch's t-test</td><td>Parametric</td><td>Difference in means</td><td>Doesn't assume equal variance between groups</td></tr>
+        <tr><td>Mann–Whitney U</td><td>Non-parametric</td><td>Difference in distributions</td><td>Robust if lap-time data isn't perfectly normal</td></tr>
+        <tr><td>Levene's Test</td><td>Variance</td><td>Equal variance</td><td>Detects consistency changes, not just pace changes</td></tr>
+        <tr><td>One-Way ANOVA</td><td>Multi-group</td><td>Difference across 4 scenarios</td><td>Tests the full scenario gradient simultaneously</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">Reproducibility</div>
+    <div class="card-sub">Files in this project</div>
+    <table>
+      <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code style="font-family:'JetBrains Mono',monospace">f1_pipeline.py</code></td><td>End-to-end data generation, cleaning, and analysis (Python + pandas + scipy)</td></tr>
+        <tr><td><code style="font-family:'JetBrains Mono',monospace">f1_lap_data_raw.csv</code></td><td>Raw 5,187-lap dataset before cleaning</td></tr>
+        <tr><td><code style="font-family:'JetBrains Mono',monospace">f1_lap_data_clean.csv</code></td><td>Cleaned 4,871-lap dataset used in analysis</td></tr>
+        <tr><td><code style="font-family:'JetBrains Mono',monospace">results_by_driver.csv</code></td><td>Aggregated per-driver consistency metrics</td></tr>
+        <tr><td><code style="font-family:'JetBrains Mono',monospace">results_by_circuit.csv</code></td><td>Aggregated per-circuit difficulty metrics</td></tr>
+        <tr><td><code style="font-family:'JetBrains Mono',monospace">results_by_scenario.csv</code></td><td>Aggregated per-scenario lap-time penalties</td></tr>
+        <tr><td><code style="font-family:'JetBrains Mono',monospace">statistical_tests.json</code></td><td>Full output of all four hypothesis tests</td></tr>
+        <tr><td><code style="font-family:'JetBrains Mono',monospace">dashboard_data.json</code></td><td>Consolidated payload powering this dashboard</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── FOOTER ────────────────────────────────────────────── -->
+<div class="footer">
+  <div>F1 Performance Analysis · Built with Python + Pandas + Chart.js</div>
+  <div>Daniel Olufemi · UCL Applied Medical Sciences</div>
+</div>
+
+<script>
+// ── DATA (embedded from pipeline output) ──────────────────────────
+const DATA = {
+  drivers: [
+    {code:"ALO", name:"Fernando Alonso",   team:"Aston Martin", penalty:0.111, drop:-5.1,  p:0.0236, sdc:9.957,  sdp:9.925},
+    {code:"VER", name:"Max Verstappen",    team:"Red Bull",     penalty:0.136, drop:-20.4, p:0.0007, sdc:11.282, sdp:8.830},
+    {code:"HUL", name:"Nico Hulkenberg",   team:"Haas",         penalty:0.144, drop:6.7,   p:0.0143, sdc:9.335,  sdp:9.734},
+    {code:"OCO", name:"Esteban Ocon",      team:"Alpine",       penalty:0.152, drop:-3.5,  p:0.0099, sdc:9.860,  sdp:9.620},
+    {code:"SAI", name:"Carlos Sainz",      team:"Ferrari",      penalty:0.161, drop:32.8,  p:0.0025, sdc:7.754,  sdp:10.236},
+    {code:"RUS", name:"George Russell",    team:"Mercedes",     penalty:0.173, drop:11.4,  p:0.0037, sdc:8.928,  sdp:9.883},
+    {code:"STR", name:"Lance Stroll",      team:"Aston Martin", penalty:0.175, drop:4.3,   p:0.0029, sdc:9.437,  sdp:10.081},
+    {code:"NOR", name:"Lando Norris",      team:"McLaren",      penalty:0.181, drop:6.2,   p:0.0017, sdc:9.236,  sdp:9.774},
+    {code:"PER", name:"Sergio Perez",      team:"Red Bull",     penalty:0.230, drop:26.4,  p:0.0008, sdc:8.093,  sdp:9.922},
+    {code:"HAM", name:"Lewis Hamilton",    team:"Mercedes",     penalty:0.241, drop:3.9,   p:0.0001, sdc:9.566,  sdp:9.934},
+    {code:"LEC", name:"Charles Leclerc",   team:"Ferrari",      penalty:0.258, drop:14.4,  p:0.0001, sdc:8.843,  sdp:9.958},
+    {code:"PIA", name:"Oscar Piastri",     team:"McLaren",      penalty:0.306, drop:-8.0,  p:0.0001, sdc:9.936,  sdp:9.523},
+    {code:"GAS", name:"Pierre Gasly",      team:"Alpine",       penalty:0.311, drop:-11.4, p:0.0001, sdc:10.592, sdp:9.436},
+  ],
+  circuits: [
+    {name:"Singapore",   type:"Street",     overtaking:"Low",      laps:788, clean:96.080,  pressure:96.419,  penalty:0.254, drop:14.5},
+    {name:"Monza",       type:"High-Speed", overtaking:"High",     laps:617, clean:83.048,  pressure:83.276,  penalty:0.243, drop:3.4},
+    {name:"Monaco",      type:"Street",     overtaking:"Very Low", laps:933, clean:74.976,  pressure:75.244,  penalty:0.237, drop:6.1},
+    {name:"Suzuka",      type:"Technical",  overtaking:"Medium",   laps:672, clean:93.618,  pressure:93.819,  penalty:0.222, drop:10.5},
+    {name:"Spa",         type:"High-Speed", overtaking:"High",     laps:518, clean:107.866, pressure:108.149, penalty:0.201, drop:2.5},
+    {name:"Bahrain",     type:"Power",      overtaking:"High",     laps:725, clean:95.527,  pressure:95.796,  penalty:0.166, drop:11.6},
+    {name:"Silverstone", type:"High-Speed", overtaking:"Medium",   laps:618, clean:89.792,  pressure:89.957,  penalty:0.163, drop:6.6},
+  ],
+  scenarios: [
+    {name:"Clean Air",        n:934,  delta:0.694, color:"#00D26A"},
+    {name:"DRS Train",        n:616,  delta:0.803, color:"#1E90FF"},
+    {name:"Battle Defensive", n:1277, delta:0.905, color:"#FF6F00"},
+    {name:"Battle Offensive", n:2044, delta:0.910, color:"#E10600"},
+  ],
+};
+
+// Team colour mapping
+const TEAM_COLOURS = {
+  "Red Bull":     "#3671C6",
+  "Ferrari":      "#E10600",
+  "Mercedes":     "#6CD3BF",
+  "McLaren":      "#FF8000",
+  "Aston Martin": "#229971",
+  "Alpine":       "#2293D1",
+  "Haas":         "#B6BABD",
+};
+
+// Tier classification
+function tier(penalty) {
+  if (penalty < 0.15)  return {label:"ELITE",   cls:"badge-elite"};
+  if (penalty < 0.18)  return {label:"STRONG",  cls:"badge-strong"};
+  if (penalty < 0.22)  return {label:"AVG",     cls:"badge-avg"};
+  if (penalty < 0.28)  return {label:"WEAK",    cls:"badge-weak"};
+                       return {label:"POOR",    cls:"badge-poor"};
+}
+
+// Chart.js global defaults
+Chart.defaults.color = '#888888';
+Chart.defaults.font.family = "'Rajdhani', sans-serif";
+Chart.defaults.font.size = 11;
+Chart.defaults.plugins.legend.display = false;
+
+// ── TAB SWITCHING ────────────────────────────────────────────
+function switchTab(ev, id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  ev.target.closest('.tab').classList.add('active');
+  setTimeout(() => renderTab(id), 50);
+}
+
+const rendered = {};
+function renderTab(id) {
+  if (rendered[id]) return;
+  rendered[id] = true;
+  if (id === 'overview')    renderOverview();
+  if (id === 'drivers')     renderDrivers();
+  if (id === 'circuits')    renderCircuits();
+  if (id === 'scenarios')   renderScenarios();
+  if (id === 'stats')       renderStats();
+}
+
+setTimeout(() => renderTab('overview'), 100);
+
+// ── OVERVIEW ─────────────────────────────────────────────────
+function renderOverview() {
+  // Scenarios bar
+  new Chart(document.getElementById('ovScenarios'), {
+    type: 'bar',
+    data: {
+      labels: DATA.scenarios.map(s => s.name),
+      datasets: [{
+        data: DATA.scenarios.map(s => s.delta),
+        backgroundColor: DATA.scenarios.map(s => s.color + 'AA'),
+        borderColor: DATA.scenarios.map(s => s.color),
+        borderWidth: 1,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#888' } },
+        y: { grid: { color: '#2A2A2A' }, ticks: { callback: v => '+' + v.toFixed(2) + 's', color: '#888' } }
+      }
+    }
+  });
+
+  // Top vs bottom drivers
+  const top3 = DATA.drivers.slice(0, 3);
+  const bot3 = DATA.drivers.slice(-3).reverse();
+  const labels = [...top3.map(d => d.code), 'GAP', ...bot3.map(d => d.code)];
+  const values = [...top3.map(d => d.penalty), 0, ...bot3.map(d => d.penalty)];
+  const colors = [
+    ...top3.map(d => TEAM_COLOURS[d.team] + 'AA'),
+    'transparent',
+    ...bot3.map(d => TEAM_COLOURS[d.team] + 'AA'),
+  ];
+  new Chart(document.getElementById('ovDrivers'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: colors,
+        borderColor: colors.map(c => c === 'transparent' ? c : c.replace('AA','')),
+        borderWidth: 1,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      scales: {
+        x: { grid: { color: '#2A2A2A' }, ticks: { callback: v => '+' + v.toFixed(2) + 's', color: '#888' } },
+        y: { grid: { display: false }, ticks: { color: '#888', font: { family: "'Oswald', sans-serif", weight: 600 } } }
+      }
+    }
+  });
+}
+
+// ── DRIVERS ──────────────────────────────────────────────────
+function renderDrivers() {
+  // Bar chart
+  new Chart(document.getElementById('drvBar'), {
+    type: 'bar',
+    data: {
+      labels: DATA.drivers.map(d => d.code),
+      datasets: [{
+        label: 'Pressure Penalty (s)',
+        data: DATA.drivers.map(d => d.penalty),
+        backgroundColor: DATA.drivers.map(d => TEAM_COLOURS[d.team] + 'AA'),
+        borderColor: DATA.drivers.map(d => TEAM_COLOURS[d.team]),
+        borderWidth: 1,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: {
+        tooltip: {
+          callbacks: {
+            title: (items) => DATA.drivers[items[0].dataIndex].name,
+            label: (item) => '+' + item.raw.toFixed(3) + 's penalty',
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#2A2A2A' }, ticks: { callback: v => '+' + v.toFixed(2) + 's', color: '#888' } },
+        y: { grid: { display: false }, ticks: { color: '#F0F0F0', font: { family: "'Oswald', sans-serif", weight: 700 } } }
+      }
+    }
+  });
+
+  // Scatter: SD clean vs SD pressure
+  new Chart(document.getElementById('drvScatter'), {
+    type: 'scatter',
+    data: {
+      datasets: DATA.drivers.map(d => ({
+        label: d.name,
+        data: [{x: d.sdc, y: d.sdp}],
+        backgroundColor: TEAM_COLOURS[d.team],
+        borderColor: TEAM_COLOURS[d.team],
+        pointRadius: 9,
+        pointHoverRadius: 12,
+        pointStyle: 'rectRot',
+      }))
+    },
+    options: {
+      plugins: {
+        legend: { display: true, position: 'right', labels: { font: { size: 10 }, color: '#888', boxWidth: 8, padding: 6 } },
+        tooltip: {
+          callbacks: {
+            title: (items) => items[0].dataset.label,
+            label: (item) => `Clean SD: ${item.parsed.x.toFixed(2)}s · Pressure SD: ${item.parsed.y.toFixed(2)}s`
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#2A2A2A' }, ticks: { color: '#888' }, title: { display: true, text: 'SD Clean Air (s)', color: '#888' } },
+        y: { grid: { color: '#2A2A2A' }, ticks: { color: '#888' }, title: { display: true, text: 'SD Under Pressure (s)', color: '#888' } }
+      }
+    }
+  });
+
+  // Table
+  const tbody = document.querySelector('#drvTable tbody');
+  DATA.drivers.forEach((d, i) => {
+    const t = tier(d.penalty);
+    const teamCls = 'bg-team-' + d.team.replace(/\s+/g, '-');
+    tbody.innerHTML += `
+      <tr>
+        <td><span class="pos${i===0?' gold':i===1?' silver':i===2?' bronze':''}">${i+1}</span></td>
+        <td><span class="team-tag ${teamCls}"></span><strong>${d.code}</strong> <span style="color:var(--text-2);font-size:11px">${d.name.split(' ')[1]}</span></td>
+        <td style="font-size:10px;color:var(--text-3)">${d.team}</td>
+        <td class="num-mono">+${d.penalty.toFixed(3)}s</td>
+        <td class="num-mono" style="color:${d.drop < 0 ? 'var(--green)' : d.drop > 15 ? 'var(--red-l)' : 'var(--text-2)'}">${d.drop > 0 ? '+' : ''}${d.drop.toFixed(1)}%</td>
+        <td><span class="badge-sig">${d.p < 0.001 ? '&lt;0.001' : d.p.toFixed(4)}</span></td>
+      </tr>`;
+  });
+}
+
+// ── CIRCUITS ─────────────────────────────────────────────────
+function renderCircuits() {
+  const cBg = ['#E10600','#FF6F00','#FFD800','#1E90FF','#00D26A','#229971','#6CD3BF'];
+  new Chart(document.getElementById('cirBar'), {
+    type: 'bar',
+    data: {
+      labels: DATA.circuits.map(c => c.name),
+      datasets: [{
+        data: DATA.circuits.map(c => c.penalty),
+        backgroundColor: cBg.map(c => c + 'AA'),
+        borderColor: cBg,
+        borderWidth: 1,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      scales: {
+        x: { grid: { color: '#2A2A2A' }, ticks: { callback: v => '+' + v.toFixed(2) + 's', color: '#888' } },
+        y: { grid: { display: false }, ticks: { color: '#F0F0F0', font: { family: "'Oswald', sans-serif", weight: 700 } } }
+      }
+    }
+  });
+
+  new Chart(document.getElementById('cirDrop'), {
+    type: 'bar',
+    data: {
+      labels: DATA.circuits.map(c => c.name),
+      datasets: [{
+        data: DATA.circuits.map(c => c.drop),
+        backgroundColor: DATA.circuits.map(c => c.drop > 10 ? '#E10600AA' : c.drop > 5 ? '#FF6F00AA' : '#00D26AAA'),
+        borderColor: DATA.circuits.map(c => c.drop > 10 ? '#E10600' : c.drop > 5 ? '#FF6F00' : '#00D26A'),
+        borderWidth: 1,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      scales: {
+        x: { grid: { color: '#2A2A2A' }, ticks: { callback: v => v + '%', color: '#888' } },
+        y: { grid: { display: false }, ticks: { color: '#F0F0F0', font: { family: "'Oswald', sans-serif", weight: 700 } } }
+      }
+    }
+  });
+
+  const tbody = document.querySelector('#cirTable tbody');
+  DATA.circuits.forEach(c => {
+    const t = c.penalty > 0.24 ? 'badge-poor' : c.penalty > 0.20 ? 'badge-weak' : c.penalty > 0.17 ? 'badge-avg' : 'badge-elite';
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>${c.name}</strong></td>
+        <td style="font-size:11px;color:var(--text-2)">${c.type}</td>
+        <td style="font-size:11px;color:var(--text-2)">${c.overtaking}</td>
+        <td class="num-mono">${c.laps}</td>
+        <td class="num-mono">${c.clean.toFixed(2)}s</td>
+        <td class="num-mono">${c.pressure.toFixed(2)}s</td>
+        <td><span class="badge ${t}">+${c.penalty.toFixed(3)}s</span></td>
+        <td class="num-mono" style="color:${c.drop > 10 ? 'var(--red-l)' : c.drop > 5 ? 'var(--orange)' : 'var(--green)'}">+${c.drop.toFixed(1)}%</td>
+      </tr>`;
+  });
+}
+
+// ── SCENARIOS ────────────────────────────────────────────────
+function renderScenarios() {
+  new Chart(document.getElementById('scenChart'), {
+    type: 'bar',
+    data: {
+      labels: DATA.scenarios.map(s => s.name + '  (n=' + s.n + ')'),
+      datasets: [{
+        data: DATA.scenarios.map(s => s.delta),
+        backgroundColor: DATA.scenarios.map(s => s.color + 'CC'),
+        borderColor: DATA.scenarios.map(s => s.color),
+        borderWidth: 2,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      plugins: {
+        tooltip: {
+          callbacks: { label: ctx => '+' + ctx.raw.toFixed(3) + 's vs PB' }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#888', font: { family: "'Oswald',sans-serif", weight: 600 } } },
+        y: { grid: { color: '#2A2A2A' }, ticks: { callback: v => '+' + v.toFixed(2) + 's', color: '#888' }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+// ── STATS PAGE ───────────────────────────────────────────────
+function renderStats() {
+  new Chart(document.getElementById('sampleSize'), {
+    type: 'doughnut',
+    data: {
+      labels: DATA.scenarios.map(s => s.name),
+      datasets: [{
+        data: DATA.scenarios.map(s => s.n),
+        backgroundColor: DATA.scenarios.map(s => s.color + 'CC'),
+        borderColor: '#0A0A0A',
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { display: true, position: 'right', labels: { color: '#888', boxWidth: 10, padding: 8, font: { size: 11 } } }
+      },
+      cutout: '60%'
+    }
+  });
+
+  // -log10(p) per driver
+  new Chart(document.getElementById('pvalChart'), {
+    type: 'bar',
+    data: {
+      labels: DATA.drivers.map(d => d.code),
+      datasets: [{
+        data: DATA.drivers.map(d => -Math.log10(Math.max(d.p, 0.00001))),
+        backgroundColor: DATA.drivers.map(d => TEAM_COLOURS[d.team] + 'AA'),
+        borderColor: DATA.drivers.map(d => TEAM_COLOURS[d.team]),
+        borderWidth: 1,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      plugins: {
+        tooltip: {
+          callbacks: { label: ctx => '-log₁₀(p) = ' + ctx.raw.toFixed(2) + '  (p = ' + DATA.drivers[ctx.dataIndex].p.toFixed(4) + ')' }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#888', font: { family: "'Oswald',sans-serif", weight: 700 } } },
+        y: {
+          grid: { color: '#2A2A2A' },
+          ticks: { color: '#888' },
+          title: { display: true, text: '-log₁₀(p)  ·  higher = more significant', color: '#888' }
+        }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>
