@@ -1,1 +1,6 @@
 
+scenario,n_laps,pct_of_all_laps,mean_delta_to_pb,median_delta,sd_lap_time
+Clean Air,934,19.2,0.694,0.649,9.735
+DRS Train,616,12.6,0.803,0.787,9.956
+Battle Defensive,1277,26.2,0.905,0.88,9.882
+Battle Offensive,2044,42.0,0.91,0.886,9.732
