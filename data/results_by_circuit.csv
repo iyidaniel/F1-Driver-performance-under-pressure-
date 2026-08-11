@@ -1,1 +1,9 @@
 
+circuit,type,overtaking_ease,race_laps,n_laps_analysed,avg_lap_clean_s,avg_lap_pressure_s,pressure_penalty_s,sd_clean_s,sd_pressure_s,consistency_drop_pct
+Singapore,Street,Low,62,788,96.08,96.419,0.254,0.496,0.569,14.5
+Monza,High-Speed,High,53,617,83.048,83.276,0.243,0.522,0.54,3.4
+Monaco,Street,Very Low,78,933,74.976,75.244,0.237,0.481,0.51,6.1
+Suzuka,Technical,Medium,53,672,93.618,93.819,0.222,0.56,0.618,10.5
+Spa,High-Speed,High,44,518,107.866,108.149,0.201,0.6,0.614,2.5
+Bahrain,Power,High,57,725,95.527,95.796,0.166,0.513,0.573,11.6
+Silverstone,High-Speed,Medium,52,618,89.792,89.957,0.163,0.539,0.574,6.6
